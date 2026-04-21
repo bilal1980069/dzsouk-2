@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DZ Souk - Import Export 🇩🇿</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #006233 0%, #5D5CDE 100%);
+        }
+
+        .floating-btn {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF0050 0%, #5D5CDE 100%);
+            box-shadow: 0 8px 30px rgba(255, 0, 80, 0.5);
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 30px rgba(255, 0, 80, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 12px 40px rgba(255, 0, 80, 0.7); }
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1) !important;
+            animation: none;
+        }
+
+        .live-btn {
+            position: fixed;
+            bottom: 170px;
+            right: 20px;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF0000 0%, #FF6B00 100%);
+            box-shadow: 0 8px 30px rgba(255, 0, 0, 0.5);
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            animation: livePulse 1.5s infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { box-shadow: 0 8px 30px rgba(255, 0, 0, 0.5); }
+            50% { box-shadow: 0 8px 50px rgba(255, 0, 0, 0.9); }
+        }
+
+        .live-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            z-index: 30;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .post-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .post-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .like-btn.liked {
+            color: #ef4444;
+            animation: heartBeat 0.4s ease;
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        video {
+            background: #000;
+        }
+
+        .badge-live {
+            background: linear-gradient(135deg, #FF0000 0%, #FF6B00 100%);
+            animation: badgePulse 2s infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide-up { animation: slideUp 0.4s ease-out; }
+
+        body.rtl {
+            direction: rtl;
+            font-family: 'Arial', 'Tahoma', sans-serif;
+        }
+
+        body.rtl .floating-btn {
+            right: auto;
+            left: 20px;
+        }
+
+        body.rtl .live-btn {
+            right: auto;
+            left: 20px;
+        }
+
+        body.rtl .post-card {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <header class="gradient-bg text-white py-4 sticky top-0 z-20 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
+            <h1 class="flex items-center">
+                <img src="https://pfst.cf2.poecdn.net/base/image/5841c8c50909bd0c3cc0b7fb551187c9c11723962b49f7a72c204b9a5a1d1ada?w=1024&h=1024" alt="DZ Souk" class="h-20 w-auto" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span style="display: none;" class="text-2xl font-bold text-white"><i class="fas fa-store mr-2"></i>DZ Souk</span>
+            </h1>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleLanguage()" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-sm font-semibold flex items-center gap-2">
+                    <span id="lang-flag">🇫🇷</span> <span id="lang-text">FR</span>
+                </button>
+                <div id="auth-section" class="flex items-center gap-2">
+                    <button onclick="showLogin()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-sm">Connexion</button>
+                    <button onclick="showRegister()" class="px-4 py-2 bg-white text-green-700 rounded-lg font-semibold hover:bg-gray-100 transition text-sm">Inscription</button>
+                </div>
+                <div id="user-section" style="display: none;" class="flex items-center gap-3">
+                    <span id="user-name" class="font-semibold text-sm"></span>
+                    <button onclick="logout()" class="px-3 py-2 bg-red-500 rounded-lg hover:bg-red-600 transition text-sm"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pb-24 pt-4">
+        <div class="max-w-7xl mx-auto px-4">
+            <div id="filters-container" class="flex gap-2 mb-6 overflow-x-auto pb-2" style="-ms-overflow-style: none; scrollbar-width: none;">
+                </div>
+
+            <div id="posts-feed" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+            <div id="empty-state" class="text-center py-20 hidden">
+                <i class="fas fa-box-open text-6xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg mb-6">Aucune annonce trouvée</p>
+                <button onclick="showPublish()" class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition">
+                    <i class="fas fa-plus mr-2"></i>Publier la première annonce
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div class="live-btn" onclick="startLive()" title="Démarrer un Live">
+        <i class="fas fa-video text-white text-2xl"></i>
+    </div>
+
+    <div class="floating-btn" onclick="showPublish()" title="Publier une annonce">
+        <i class="fas fa-plus text-white text-3xl"></i>
+    </div>
+    <nav class="bottom-nav">
+        <div class="flex justify-around items-center py-3">
+            <button onclick="goHome()" class="flex flex-col items-center text-green-600">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-xs mt-1">Accueil</span>
+            </button>
+            <button onclick="showSearch()" class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-search text-xl"></i>
+                <span class="text-xs mt-1">Rechercher</span>
+            </button>
+            <button onclick="showPublish()" class="flex flex-col items-center text-green-600">
+                <i class="fas fa-plus-circle text-3xl"></i>
+            </button>
+            <button onclick="showMessages()" class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-envelope text-xl"></i>
+                <span class="text-xs mt-1">Messages</span>
+            </button>
+            <button onclick="showNotifications()" class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-bell text-xl"></i>
+                <span class="text-xs mt-1">Notifs</span>
+            </button>
+            <button onclick="showProfile()" class="flex flex-col items-center text-gray-500">
+                <i class="fas fa-user text-xl"></i>
+                <span class="text-xs mt-1">Profil</span>
+            </button>
+        </div>
+    </nav>
+
+    <div id="register-modal" class="modal">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Créer un compte</h2>
+                <button onclick="closeModals()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times text-2xl"></i></button>
+            </div>
+            <form onsubmit="register(event)">
+                <input type="text" id="reg-name" placeholder="Nom complet" required class="w-full px-4 py-3 mb-4 text-base border rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all">
+                <input type="email" id="reg-email" placeholder="Email" required class="w-full px-4 py-3 mb-4 text-base border rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all">
+                <input type="password" id="reg-password" placeholder="Mot de passe" required class="w-full px-4 py-3 mb-4 text-base border rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all">
+                <input type="tel" id="reg-phone" placeholder="Numéro de téléphone" required class="w-full px-4 py-3 mb-4 text-base border rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all">
+                
+                <select id="reg-country" required class="w-full px-4 py-3 mb-4 text-base border rounded-lg outline-none focus:ring-2 focus:ring-green-500 transition-all bg-white" onchange="updateLocationOptions()">
+                    <option value="">Sélectionnez votre pays</option>
+                    <option value="algerie">🇩🇿 Algérie</option>
+                    <option value="france">🇫
+    <script>
+        // --- 1. CONFIGURATION SUPABASE (AVEC TES CLÉS) ---
+        const SUPABASE_URL = "https://rsmovrdwtcekzccuxawm.supabase.co";
+        const SUPABASE_KEY = "Sb_publishable_l3cyfOOO8TGzKu5uLZ34YQ_IsZVzn6E";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- 2. DONNÉES ET TRADUCTIONS ---
+        const translations = {
+            fr: {
+                login: 'Connexion', register: 'Inscription', logout: 'Déconnexion', home: 'Accueil',
+                search: 'Rechercher', messages: 'Messages', notifications: 'Notifs', profile: 'Profil',
+                all: 'Tout', lives: 'Lives', wholesaler: 'Grossiste', retailer: 'Détaillant',
+                individual: 'Particulier', delivery: 'Livreur', alimentaire: 'Alimentaire', 
+                vehicule: 'Véhicule', textiles: 'Textiles', immobilier: 'Immobilier',
+                locationMaison: 'Location Maison', locationVehicule: 'Location Véhicule', 
+                hotels: 'Hôtels', electronique: 'Électronique', jeux: 'Jeux', velo: 'Vélo', 
+                marketingDigital: 'Marketing Digital', agenceImmobiliere: 'Agence Immobilière', 
+                formation: 'Formation', coursLangue: 'Cours de Langue', publish: 'Publier'
+            },
+            ar: {
+                login: 'تسجيل الدخول', register: 'التسجيل', logout: 'خروج', home: 'الرئيسية',
+                search: 'بحث', messages: 'رسائل', notifications: 'إشعارات', profile: 'حسابي',
+                all: 'الكل', lives: 'بث مباشر', wholesaler: 'جملة', retailer: 'تجزئة',
+        // --- 4. GESTION DES WILAYAS ET PAYS ---
+        function updateLocationOptions() {
+            const country = document.getElementById('reg-country').value;
+            const wilayaSelect = document.getElementById('reg-wilaya');
+            
+            if (country === 'algerie') {
+                const wilayas = [
+                    "01 Adrar", "02 Chlef", "03 Laghouat", "04 Oum El Bouaghi", "05 Batna", "06 Béjaïa", "07 Biskra", "08 Béchar", "09 Blida", "10 Bouira", 
+                    "11 Tamanrasset", "12 Tébessa", "13 Tlemcen", "14 Tiaret", "15 Tizi Ouzou", "16 Alger", "17 Djelfa", "18 Jijel", "19 Sétif", "20 Saïda", 
+                    "21 Skikda", "22 Sidi Bel Abbès", "23 Annaba", "24 Guelma", "25 Constantine", "26 Médéa", "27 Mostaganem", "28 M'Sila", "29 Mascara", "30 Ouargla", 
+                    "31 Oran", "32 El Bayadh", "33 Illizi", "34 Bordj Bou Arreridj", "35 Boumerdès", "36 El Tarf", "37 Tindouf", "38 Tissemsilt", "39 El Oued", "40 Khenchela", 
+                    "41 Souk Ahras", "42 Tipaza", "43 Mila", "44 Aïn Defla", "45 Naâma", "46 Aïn Témouchent", "47 Ghardaïa", "48 Relizane", "49 El M'Ghair", "50 El Meniaa", 
+                    "51 Ouled Djellal", "52 Bordj Badji Mokhtar", "53 Béni Abbès", "54 Timimoun", "55 Touggourt", "56 Djanet", "57 In Salah", "58 In Guezzam"
+                ];
+                wilayaSelect.innerHTML = '<option value="">Choisissez votre Wilaya</option>' + 
+                    wilayas.map(w => `<option value="${w}">${w}</option>`).join('');
+            } else if (country === 'france') {
+                wilayaSelect.innerHTML = `
+                    <option value="">Département</option>
+                    <option value="75">75 - Paris</option>
+                    <option value="13">13 - Marseille</option>
+                    <option value="69">69 - Lyon</option>
+                    <option value="autre">Autre département</option>
+                `;
+            } else {
+                wilayaSelect.innerHTML = '<option value="autre">Autre localité</option>';
+            }
+        }
+
+        // --- 5. GESTION DES MÉDIAS (PHOTOS/VIDÉOS) ---
+        let selectedMedia = [];
+        function handleMedia(event) {
+            const files = Array.from(event.target.files);
+            const preview = document.getElementById('media-preview');
+            
+            files.forEach(file => {
+                selectedMedia.push(file);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative group h-24 w-full';
+                    if (file.type.startsWith('video/')) {
+                        div.innerHTML = `
+                            <video src="${e.target.result}" class="h-full w-full object-cover rounded-lg"></video>
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                                <i class="fas fa-play text-white"></i>
+                            </div>`;
+                    } else {
+                        div.innerHTML = `<img src="${e.target.result}" class="h-full w-full object-cover rounded-lg shadow-sm">`;
+                    }
+                    preview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- 6. FONCTIONS D'AUTHENTIFICATION SUPABASE ---
+        async function register(e) {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
+            const country = document.getElementById('reg-country').value;
+            const wilaya = document.getElementById('reg-wilaya').value;
+
+            const { data, error } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: { 
+                        full_name: name, 
+                        phone: phone,
+                        country: country,
+                        wilaya: wilaya 
+                    }
+                }
+            });
+
+            if (error) {
+                notify("Erreur : " + error.message, 'error');
+            } else {
+                notify('Compte créé ! Vérifiez vos emails pour confirmer.', 'success');
+                closeModals();
+            }
+        }
+
+        async function login(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                notify("Erreur : " + error.message, 'error');
+            } else {
+                currentUser = data.user;
+                updateUI();
+                notify('Content de vous revoir !', 'success');
+                closeModals();
+            }
+        }
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            currentUser = null;
+            updateUI();
+            notify('Vous êtes maintenant déconnecté', 'info');
+        }
+
+        // --- 7. INTERFACE ET NAVIGATION ---
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'fr' ? 'ar' : 'fr';
+            document.body.classList.toggle('rtl', currentLanguage === 'ar');
+            
+            // Mise à jour visuelle du bouton de langue
+            const flag = document.getElementById('lang-flag');
+            const text = document.getElementById('lang-text');
+            if (currentLanguage === 'fr') {
+                flag.textContent = '🇫🇷';
+                text.textContent = 'FR';
+            } else {
+                flag.textContent = '🇩🇿';
+                text.textContent = 'AR';
+            }
+            
+            renderFilters();
+            updateUI();
+        }
+
+        function updateUI() {
+            const authSec = document.getElementById('auth-section');
+            const userSec = document.getElementById('user-section');
+            const userNameDisplay = document.getElementById('user-name');
+
+            if (currentUser) {
+                authSec.style.display = 'none';
+                userSec.style.display = 'flex';
+                userNameDisplay.textContent = currentUser.user_metadata.full_name || currentUser.email;
+            } else {
+                authSec.style.display = 'flex';
+                userSec.style.display = 'none';
+            }
+        }
+
+        function filterPosts(id) {
+            currentFilter = id;
+            renderFilters();
+            // Simulation de filtrage
+            notify(t('all') + " : " + id, 'info');
+        }
+
+        // --- GESTION DES MODALS ---
+        function showRegister() { closeModals(); document.getElementById('register-modal').classList.add('active'); }
+        function showLogin() { closeModals(); document.getElementById('login-modal').classList.add('active'); }
+        function showPublish() { 
+            if (!currentUser) {
+                showLogin();
+                notify('Veuillez vous connecter pour publier', 'info');
+            } else {
+                document.getElementById('publish-modal').classList.add('active'); 
+            }
+        }
+        function startLive() { 
+            if (!currentUser) {
+                showLogin();
+            } else {
+                notify('Démarrage du live...', 'info');
+            }
+        }
+        function closeModals() { 
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
+        }
+
+        // --- AUTRES FONCTIONS ---
+        function notify(msg, type = 'info') {
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                info: 'bg-blue-600'
+            };
+            const div = document.createElement('div');
+            div.className = `fixed top-20 right-4 ${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-slide-up font-bold`;
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transform = 'translateY(-20px)';
+                div.style.transition = 'all 0.5s ease';
+                setTimeout(() => div.remove(), 500);
+            }, 3000);
+        }
+
+        function goHome() { closeModals(); filterPosts('all'); window.scrollTo({top: 0, behavior: 'smooth'}); }
+        function showSearch() { notify('Recherche bientôt disponible', 'info'); }
+        function showMessages() { notify('Messagerie bientôt disponible', 'info'); }
+        function showNotifications() { notify('Aucune nouvelle notification', 'info'); }
+        function showProfile() { if(!currentUser) showLogin(); else notify('Profil bientôt disponible', 'info'); }
+
+        async function publish(e) {
+            e.preventDefault();
+            notify('Publication en cours...', 'info');
+            setTimeout(() => {
+                notify('Annonce publiée !', 'success');
+                closeModals();
+            }, 2000);
+        }
+
+        // --- INITIALISATION ---
+        window.onload = () => {
+            renderFilters();
+            updateUI();
+            
+            // Vérifier si une session existe déjà
+            supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    currentUser = session.user;
+                    updateUI();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
+
